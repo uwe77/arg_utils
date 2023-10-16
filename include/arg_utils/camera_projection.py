@@ -27,18 +27,19 @@ from numpy.linalg import inv
 
 # %% ../01_camera_projection.ipynb 5
 class camera_projection:
-    def __init__(self, tag_s=0.0415):
+    def __init__(self):
         """init a camera projection object with default arguments
         """
-        self.img_path = 'ViperX_apriltags/rgb/'
-        self.depth_path = 'ViperX_apriltags/depth/'
-        self.tag_size = tag_s
+        self.camera_info_path = '/ViperX_apriltags/camera_info.yaml'
+        self.img_path = '/ViperX_apriltags/rgb/'
+        self.depth_path = '/ViperX_apriltags/depth/'
+        self.tag_size = 0.0415
         self.s = 0.5 * self.tag_size
 
-    def read_camera_info(self, cam_info_path = 'ViperX_apriltags/camera_info.yaml'):
+    def read_camera_info(self):
         """read camera info from yaml file, path is given, camera info contains camera matrix and dist coefts
         """
-        with open(cam_info_path, "r") as stream:
+        with open(self.camera_info_path, "r") as stream:
             try:
                 camera_data = yaml.safe_load(stream)
             except yaml.YAMLError as exc:
@@ -50,21 +51,21 @@ class camera_projection:
         self.cameraParams_Intrinsic = [self.camera_matrix[0,0], self.camera_matrix[1,1],
                                        self.camera_matrix[0,2], self.camera_matrix[1,2]]
  
-    def read_images(self, idx=300, img_path = 'ViperX_apriltags/rgb/', depth_path = 'ViperX_apriltags/depth/'):
+    def read_images(self, idx):
         """this function will load an image depend on the id number, often used in a for loop
         """
-        img_path = img_path + str(idx) + '.png'
-        depth_path = depth_path + str(idx) + '.png'
-        self.img = cv2.imread(img_path)
+        self.img_path = self.img_path + str(idx) + '.png'
+        self.depth_path = self.depth_path + str(idx) + '.png'
+        self.img = cv2.imread(self.img_path)
         self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
-        self.depth = cv2.imread(depth_path, -cv2.IMREAD_ANYDEPTH)
+        self.depth = cv2.imread(self.depth_path, -cv2.IMREAD_ANYDEPTH)
         self.img_dst = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
 
-    def apriltag_detection(self, tag_type = 'tag36h11')):
+    def apriltag_detection(self):
         """detect if there is apriltag or not in self.gray, the self image
         """
         print("[INFO] detecting AprilTags...")
-        options = apriltag.DetectorOptions(families= tag_type)
+        options = apriltag.DetectorOptions(families="tag36h11")
         detector = apriltag.Detector(options)
         #results = detector.detect(gray)
         self.detection_results, dimg = detector.detect(self.gray, return_image=True)

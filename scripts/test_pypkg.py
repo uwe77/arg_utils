@@ -11,6 +11,3 @@ def test_say_it_works():
 
 def test_say_it_works_2():
     assert say_it_works_2() == "It works!"
-    
-#say_it_works()
-#say_it_works_2()
