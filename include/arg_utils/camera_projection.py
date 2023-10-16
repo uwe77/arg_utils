@@ -30,15 +30,16 @@ class camera_projection:
     def __init__(self):
         """init a camera projection object with default arguments
         """
-        self.camera_info_path = '/ViperX_apriltags/camera_info.yaml'
-        self.img_path = '/ViperX_apriltags/rgb/'
-        self.depth_path = '/ViperX_apriltags/depth/'
-        self.tag_size = 0.0415
-        self.s = 0.5 * self.tag_size
+        # self.camera_info_path = '/ViperX_apriltags/camera_info.yaml'
+        # self.img_path = '/ViperX_apriltags/rgb/'
+        # self.depth_path = '/ViperX_apriltags/depth/'
+        # self.tag_size = 0.0415
+        # self.s = 0.5 * self.tag_size
 
-    def read_camera_info(self):
+    def read_camera_info(self, camera_info_path='/ViperX_apriltags/camera_info.yaml'):
         """read camera info from yaml file, path is given, camera info contains camera matrix and dist coefts
         """
+        self.camera_info_path = camera_info_path
         with open(self.camera_info_path, "r") as stream:
             try:
                 camera_data = yaml.safe_load(stream)
@@ -50,10 +51,13 @@ class camera_projection:
         self.dist_coeffs = self.dist_coeffs.reshape(1, 5)
         self.cameraParams_Intrinsic = [self.camera_matrix[0,0], self.camera_matrix[1,1],
                                        self.camera_matrix[0,2], self.camera_matrix[1,2]]
- 
-    def read_images(self, idx):
+        
+
+    def read_images(self, idx=300, img_path='/ViperX_apriltags/rgb/', depth_path='/ViperX_apriltags/depth/'):
         """this function will load an image depend on the id number, often used in a for loop
         """
+        self.img_path = img_path
+        self.depth_path = depth_path
         self.img_path = self.img_path + str(idx) + '.png'
         self.depth_path = self.depth_path + str(idx) + '.png'
         self.img = cv2.imread(self.img_path)
@@ -61,19 +65,22 @@ class camera_projection:
         self.depth = cv2.imread(self.depth_path, -cv2.IMREAD_ANYDEPTH)
         self.img_dst = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
 
-    def apriltag_detection(self):
+    def apriltag_detection(self, tag_type="tag36h11"):
         """detect if there is apriltag or not in self.gray, the self image
         """
         print("[INFO] detecting AprilTags...")
-        options = apriltag.DetectorOptions(families="tag36h11")
+        options = apriltag.DetectorOptions(families=tag_type)
         detector = apriltag.Detector(options)
         #results = detector.detect(gray)
         self.detection_results, dimg = detector.detect(self.gray, return_image=True)
         print("[INFO] {} total AprilTags detected".format(len(self.detection_results)))
 
-    def solvePnP(self):
+
+    def solvePnP(self, tag_size = 0.0415):
         """this function will output the rotation matrix r_vec and translation matrix t_vex, this two matrixs is important for projection
         """
+        self.tag_size = tag_size
+        self.s = 0.5 * self.tag_size
         img_pts = self.detection_results[0].corners.reshape(1,4,2)
         obj_pt1 = [-self.s, -self.s, 0.0]
         obj_pt2 = [ self.s, -self.s, 0.0]
