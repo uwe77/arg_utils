@@ -46,15 +46,13 @@ class camera_projection:
                 camera_data = yaml.safe_load(stream)
             except yaml.YAMLError as exc:
                 print(exc)
-        # print(self.camera_matrix)
         self.camera_matrix = np.array(camera_data['camera_matrix']['data'])
         self.camera_matrix = self.camera_matrix.reshape(3, 3)
         self.dist_coeffs = np.array(camera_data['distortion_coefficients']['data'])
         self.dist_coeffs = self.dist_coeffs.reshape(1, 5)
-        # print(self.dist_coeffs)
         self.cameraParams_Intrinsic = [self.camera_matrix[0,0], self.camera_matrix[1,1],
                                        self.camera_matrix[0,2], self.camera_matrix[1,2]]
-        # print(self.cameraParams_Intrinsic)
+        
  
     def read_images(self, idx=300, img_path='ViperX_apriltags/rgb/', depth_path='ViperX_apriltags/depth/'):
         """this function will load an image depend on the id number, often used in a for loop
@@ -68,6 +66,7 @@ class camera_projection:
         self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
         self.depth = cv2.imread(self.depth_path, -cv2.IMREAD_ANYDEPTH)
         self.img_dst = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
+        return self.img, self.gray, self.depth, self.img_dst
 
     def apriltag_detection(self, tag_type = 'tag36h11'):
         """detect if there is apriltag or not in self.gray, the self image
@@ -77,6 +76,7 @@ class camera_projection:
         detector = apriltag.Detector(options)
         #results = detector.detect(gray)
         self.detection_results, dimg = detector.detect(self.gray, return_image=True)
+
         print("[INFO] {} total AprilTags detected".format(len(self.detection_results)))
 
     def solvePnP(self, tag_size=0.0415):
@@ -94,28 +94,19 @@ class camera_projection:
         
         _, self.r_vec, self.t_vec = cv2.solvePnP(obj_pts, img_pts, self.camera_matrix,
                                        self.dist_coeffs, flags=cv2.SOLVEPNP_ITERATIVE)
+        print("r_vec\n",self.r_vec)
+        print("t_vec\n",self.t_vec)
         R_mat, _ = cv2.Rodrigues(self.r_vec)
         T = np.hstack((R_mat, self.t_vec)).reshape(3,4)
         tag_pose = np.vstack((T, [0,0,0,1])).reshape(4,4)
         dist = np.linalg.norm(self.t_vec)
+
         
-    def draw_point(self):
+    def draw_point(self, tag_2_inv, base2joint):
         """for visualization, draw the project points on the image is important
         """
         # --------------- project a point ---------------
-        r = R.from_euler('x', 180, degrees=True)
-        r_tran = np.identity(4)
-        r_tran[:3,:3] = r.as_matrix()
-        with open('datas/ViperX_apriltags/pose/' + str(self.idx) + '.yaml', "r") as stream:
-            try:
-                data = yaml.safe_load(stream)
-            except yaml.YAMLError as exc:
-                print(exc)
-        tag_2 = np.array(data['Tag_2_pose'][0]['transformation_matrix'][0])
-        tag_2 = tag_2.reshape(4, 4)
-        tag_2_inv = np.matmul(tag_2, r_tran)
-        tag_2_inv = inv(tag_2_inv)
-        tag2joint = np.matmul(tag_2_inv, np.identity(4))
+        tag2joint = np.matmul(tag_2_inv, base2joint)
         obj_pts = np.array([tag2joint[0,3], tag2joint[1,3], tag2joint[2,3]]).reshape(1,3)
         proj_img_pts, jac = cv2.projectPoints(obj_pts, self.r_vec, self.t_vec,
                                               self.camera_matrix, self.dist_coeffs)
