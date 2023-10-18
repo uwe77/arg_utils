@@ -1,2 +1,3 @@
 scripts/__pycache__
 scripts/datas/*
+.pytest_cache
